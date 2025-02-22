@@ -159,8 +159,8 @@ def main():
     clock = pygame.time.Clock()
 
     # Создание танков
-    tank1 = Tank(100, 100, RED)
-    enemies = [EnemyTank(random.randint(0, WIDTH - TANK_WIDTH), random.randint(0, HEIGHT - TANK_HEIGHT), YELLOW, tank1) for _ in range(3)]  # 3 противника
+    tank1 = Tank(100, 100, RED) #Убрать красный цвет, без помидоров
+    enemies = [EnemyTank(random.randint(0, WIDTH - TANK_WIDTH), random.randint(0, HEIGHT - TANK_HEIGHT), YELLOW, tank1) for _ in range(3)]  # 3 противника, добавить хитбоксы
 
     bullets = []
     enemy_bullets = []
@@ -172,7 +172,7 @@ def main():
 
     while run:
         clock.tick(60)
-        WIN.fill(WHITE)
+        WIN.fill(WHITE) #добавить фон
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -180,7 +180,7 @@ def main():
 
         # Управление танком игрока
         keys = pygame.key.get_pressed()
-        if keys[pygame.K_w]:
+        if keys[pygame.K_w]: #добавить направление танка
             tank1.move(0, -1)
         if keys[pygame.K_s]:
             tank1.move(0, 1)
@@ -201,12 +201,12 @@ def main():
 
         # Обновление пуль игрока
         for bullet in bullets[:]:
-            bullet.move(0, -1)
+            bullet.move(0, -1) #направление пуль
             bullet.draw(WIN)
             # Проверка столкновений пуль игрока с противниками
             for enemy in enemies[:]:
                 if bullet.get_rect().colliderect(enemy.get_rect()):
-                    enemy.take_damage(1)
+                    enemy.take_damage(1) #подумать над демджом
                     if enemy.hp <= 0:
                         enemies.remove(enemy)
                     if bullet in bullets:
@@ -215,7 +215,7 @@ def main():
 
         # Обновление пуль противников
         for bullet in enemy_bullets[:]:
-            bullet.move(0, -1)
+            bullet.move(0, -1) #подумать над направлением пуль
             bullet.draw(WIN)
             # Проверка столкновений пуль противников с игроком
             if bullet.get_rect().colliderect(tank1.get_rect()):
@@ -224,7 +224,7 @@ def main():
                     enemy_bullets.remove(bullet)
 
         # Обновление танков
-        tank1.draw(WIN)
+        tank1.draw(WIN) #подумать над этим
         for enemy in enemies:
             enemy.draw(WIN)
 
@@ -232,7 +232,7 @@ def main():
         for bonus in bonuses[:]:
             bonus.draw(WIN)
             # Проверка столкновений с бонусами
-            if tank1.get_rect().colliderect(bonus.get_rect()):
+            if tank1.get_rect().colliderect(bonus.get_rect()): #подумать над бонусами и текстурами
                 if bonus.type == "shield":
                     tank1.activate_shield()
                 elif bonus.type == "invulnerability":
