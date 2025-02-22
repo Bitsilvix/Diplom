@@ -23,7 +23,7 @@ YELLOW = (255, 255, 0)
 TANK_WIDTH, TANK_HEIGHT = 40, 40
 TANK_SPEED = 2
 BULLET_SPEED = 5
-BULLET_COOLDOWN = 10  # 3 секунды
+BULLET_COOLDOWN = 10  # 3 секунды иаырвфолдагфлуыпдыгуиажгврыашожуыфраышуа
 
 # Настройки бонусов
 BONUS_SIZE = 20
