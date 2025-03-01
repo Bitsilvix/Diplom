@@ -7,9 +7,9 @@ import math
 pygame.init()
 
 # Настройки окна
-WIDTH, HEIGHT = 1280, 720 #я жалуюсь на то, что танк выходит за границы, мне не понравилось, удаляй
+WIDTH, HEIGHT = 1280, 720
 WIN = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("World of Tanks Nintendo Switch edition") #World of Tanks available on PSP
+pygame.display.set_caption("World of Tanks Nintendo Switch edition")
 
 # Цвета
 WHITE = (255, 255, 255)
@@ -18,46 +18,56 @@ RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
 YELLOW = (255, 255, 0)
+CANYON = (139, 69, 19)  # Коричневый цвет для препятствий
 
 # Настройки танка
 TANK_WIDTH, TANK_HEIGHT = 40, 40
 TANK_SPEED = 2
 BULLET_SPEED = 5
-BULLET_COOLDOWN = 10  # 3 секунды иаырвфолдагфлуыпдыгуиажгврыашожуыфраышуа
+BULLET_COOLDOWN = 10
 
-# Настройки бонусов     
+# Настройки бонусов
 BONUS_SIZE = 20
 BONUS_TYPES = ["explosive_bullet", "shield", "invulnerability"]
 
+# Настройки препятствий
+OBSTACLE_WIDTH, OBSTACLE_HEIGHT = 80, 80
+NUM_OBSTACLES = 10  # Количество препятствий
+
+# Загрузка изображения танка
 def load_tank_image():
-    image_path = os.path.join("Sprites", "tank.png")  # Путь к изображению
+    image_path = os.path.join("Sprites", "tank.png")
     if not os.path.exists(image_path):
         raise FileNotFoundError(f"Файл {image_path} не найден!")
     image = pygame.image.load(image_path)
-    image = pygame.transform.scale(image, (TANK_WIDTH, TANK_HEIGHT))  # Масштабируем изображение
+    image = pygame.transform.scale(image, (TANK_WIDTH, TANK_HEIGHT))
     return image
-    
+
 # Класс танка
 class Tank:
-    def __init__(self, x, y, color):
+    def __init__(self, x, y):
         self.x = x
         self.y = y
-        self.color = color
         self.hp = 15
         self.bullets = 5
         self.last_shot = pygame.time.get_ticks()
         self.shield = False
         self.invulnerable = False
         self.invulnerable_start_time = 0
-
-        self.image = load_tank_image()  # Загружаем изображение танка
+        self.image = load_tank_image()
 
     def draw(self, win):
-        win.blit(self.image, (self.x, self.y))  # Отрисовываем изображение вместо прямоугольника
+        win.blit(self.image, (self.x, self.y))
 
     def move(self, dx, dy):
-        self.x += dx * TANK_SPEED
-        self.y += dy * TANK_SPEED
+        # Проверка границ окна
+        new_x = self.x + dx * TANK_SPEED
+        new_y = self.y + dy * TANK_SPEED
+
+        if 0 <= new_x <= WIDTH - TANK_WIDTH:
+            self.x = new_x
+        if 0 <= new_y <= HEIGHT - TANK_HEIGHT:
+            self.y = new_y
 
     def shoot(self):
         current_time = pygame.time.get_ticks()
@@ -88,7 +98,7 @@ class Tank:
         self.invulnerable_start_time = pygame.time.get_ticks()
 
     def update_invulnerability(self):
-        if self.invulnerable and pygame.time.get_ticks() - self.invulnerable_start_time > 10000: #ставится время неуязвимости
+        if self.invulnerable and pygame.time.get_ticks() - self.invulnerable_start_time > 10000:
             self.invulnerable = False
 
     def get_rect(self):
@@ -103,14 +113,14 @@ class Bullet:
         self.color = YELLOW
 
     def draw(self, win):
-        pygame.draw.circle(win, self.color, (self.x, self.y), self.radius) #Надо найти спрайт и вставить изображение
+        pygame.draw.circle(win, self.color, (self.x, self.y), self.radius)
 
     def move(self, dx, dy):
         self.x += dx * BULLET_SPEED
         self.y += dy * BULLET_SPEED
 
     def get_rect(self):
-        return pygame.Rect(self.x - self.radius, self.y - self.radius, self.radius * 2, self.radius * 2) #HMMMMMMMM
+        return pygame.Rect(self.x - self.radius, self.y - self.radius, self.radius * 2, self.radius * 2)
 
 # Класс бонуса
 class Bonus:
@@ -126,18 +136,32 @@ class Bonus:
     def get_rect(self):
         return pygame.Rect(self.x, self.y, BONUS_SIZE, BONUS_SIZE)
 
+# Класс препятствия
+class Obstacle:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+        self.width = OBSTACLE_WIDTH
+        self.height = OBSTACLE_HEIGHT
+
+    def draw(self, win):
+        pygame.draw.rect(win, CANYON, (self.x, self.y, self.width, self.height))
+
+    def get_rect(self):
+        return pygame.Rect(self.x, self.y, self.width, self.height)
+
 # Класс противника
 class EnemyTank(Tank):
-    def __init__(self, x, y, color, target):
-        super().__init__(x, y, color)
-        self.target = target  # Цель (игрок)
+    def __init__(self, x, y, target):
+        super().__init__(x, y)
+        self.target = target
         self.move_timer = pygame.time.get_ticks()
         self.shoot_timer = pygame.time.get_ticks()
 
     def update(self):
         # Движение к цели
         current_time = pygame.time.get_ticks()
-        if current_time - self.move_timer > 1000:  # Обновляем направление каждую секунду
+        if current_time - self.move_timer > 1000:
             self.move_timer = current_time
             dx = self.target.x - self.x
             dy = self.target.y - self.y
@@ -148,7 +172,7 @@ class EnemyTank(Tank):
             self.move(dx, dy)
 
         # Стрельба в цель
-        if current_time - self.shoot_timer > 2000:  # Стреляем каждые 2 секунды
+        if current_time - self.shoot_timer > 2000:
             self.shoot_timer = current_time
             return self.shoot()
         return None
@@ -159,8 +183,8 @@ def main():
     clock = pygame.time.Clock()
 
     # Создание танков
-    tank1 = Tank(100, 100, RED) #Убрать красный цвет, без помидоров
-    enemies = [EnemyTank(random.randint(0, WIDTH - TANK_WIDTH), random.randint(0, HEIGHT - TANK_HEIGHT), YELLOW, tank1) for _ in range(3)]  # 3 противника, добавить хитбоксы
+    tank1 = Tank(100, 100)
+    enemies = [EnemyTank(random.randint(0, WIDTH - TANK_WIDTH), random.randint(0, HEIGHT - TANK_HEIGHT), tank1) for _ in range(3)]
 
     bullets = []
     enemy_bullets = []
@@ -170,9 +194,16 @@ def main():
     for _ in range(5):
         bonuses.append(Bonus(random.randint(0, WIDTH - BONUS_SIZE), random.randint(0, HEIGHT - BONUS_SIZE)))
 
+    # Создание препятствий
+    obstacles = []
+    for _ in range(NUM_OBSTACLES):
+        x = random.randint(0, WIDTH - OBSTACLE_WIDTH)
+        y = random.randint(0, HEIGHT - OBSTACLE_HEIGHT)
+        obstacles.append(Obstacle(x, y))
+
     while run:
         clock.tick(60)
-        WIN.fill(WHITE) #добавить фон
+        WIN.fill(WHITE)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -180,7 +211,7 @@ def main():
 
         # Управление танком игрока
         keys = pygame.key.get_pressed()
-        if keys[pygame.K_w]: #добавить направление танка
+        if keys[pygame.K_w]:
             tank1.move(0, -1)
         if keys[pygame.K_s]:
             tank1.move(0, 1)
@@ -201,12 +232,11 @@ def main():
 
         # Обновление пуль игрока
         for bullet in bullets[:]:
-            bullet.move(0, -1) #направление пуль
+            bullet.move(0, -1)
             bullet.draw(WIN)
-            # Проверка столкновений пуль игрока с противниками
             for enemy in enemies[:]:
                 if bullet.get_rect().colliderect(enemy.get_rect()):
-                    enemy.take_damage(1) #подумать над демджом
+                    enemy.take_damage(1)
                     if enemy.hp <= 0:
                         enemies.remove(enemy)
                     if bullet in bullets:
@@ -215,29 +245,31 @@ def main():
 
         # Обновление пуль противников
         for bullet in enemy_bullets[:]:
-            bullet.move(0, -1) #подумать над направлением пуль
+            bullet.move(0, -1)
             bullet.draw(WIN)
-            # Проверка столкновений пуль противников с игроком
             if bullet.get_rect().colliderect(tank1.get_rect()):
                 tank1.take_damage(1)
                 if bullet in enemy_bullets:
                     enemy_bullets.remove(bullet)
 
         # Обновление танков
-        tank1.draw(WIN) #подумать над этим
+        tank1.draw(WIN)
         for enemy in enemies:
             enemy.draw(WIN)
 
         # Обновление бонусов
         for bonus in bonuses[:]:
             bonus.draw(WIN)
-            # Проверка столкновений с бонусами
-            if tank1.get_rect().colliderect(bonus.get_rect()): #подумать над бонусами и текстурами
+            if tank1.get_rect().colliderect(bonus.get_rect()):
                 if bonus.type == "shield":
                     tank1.activate_shield()
                 elif bonus.type == "invulnerability":
                     tank1.activate_invulnerability()
                 bonuses.remove(bonus)
+
+        # Обновление препятствий
+        for obstacle in obstacles:
+            obstacle.draw(WIN)
 
         # Обновление неуязвимости
         tank1.update_invulnerability()
