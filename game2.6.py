@@ -2,6 +2,7 @@ import pygame
 import os
 import random
 import math
+import time
 
 # Инициализация Pygame
 pygame.init()
@@ -25,7 +26,7 @@ GRAY = (128, 128, 128)  # Серый цвет для недоступных кн
 TANK_WIDTH, TANK_HEIGHT = 40, 40
 TANK_SPEED = 2
 BULLET_SPEED = 5
-BULLET_COOLDOWN = 10
+BULLET_COOLDOWN = 2000
 
 # Настройки бонусов
 BONUS_SIZE = 20
@@ -38,7 +39,7 @@ NUM_OBSTACLES = 10  # Количество препятствий
 # Загрузка изображений
 def load_image(path, width, height):
     if not os.path.exists(path):
-        raise FileNotFoundError(f"Файл {path} не найден!")
+        raise FileNotFoundError(f"Файл {path} не найден!") 
     image = pygame.image.load(path)
     image = pygame.transform.scale(image, (width, height))
     return image
@@ -49,11 +50,56 @@ def load_tank_image():
 
 # Загрузка изображений врагов
 def load_enemy_images():
-    return [load_image(os.path.join("Sprites", f"enemy_tank_{i}.png"), TANK_WIDTH, TANK_HEIGHT) for i in range(1, 4)]
+    return [load_image(os.path.join("Sprites", f"bot.png"), TANK_WIDTH, TANK_HEIGHT) for i in range(1, 4)]
 
 # Загрузка фонового изображения
 def load_background():
     return load_image(os.path.join("Sprites", "background.jpg"), WIDTH, HEIGHT)
+
+# Титульный экран
+def title_screen():
+    run = True
+    clock = pygame.time.Clock()
+
+    # Загрузка фона
+    background = load_background()
+
+    while run:
+        clock.tick(60)
+        WIN.blit(background, (0, 0))
+
+        # Отрисовка кнопок
+        font = pygame.font.SysFont("Arial", 40)
+        text = font.render("Выберите карту", True, WHITE)
+        WIN.blit(text, (WIDTH // 2 - text.get_width() // 2, 100))
+
+        # Кнопка карты 1
+        map1_button = pygame.Rect(WIDTH // 2 - 100, 200, 200, 50)
+        pygame.draw.rect(WIN, GREEN, map1_button)
+        text = font.render("Карта 1", True, BLACK)
+        WIN.blit(text, (WIDTH // 2 - text.get_width() // 2, 210))
+
+        # Кнопка карты 2 (недоступна)
+        map2_button = pygame.Rect(WIDTH // 2 - 100, 300, 200, 50)
+        pygame.draw.rect(WIN, GRAY, map2_button)
+        text = font.render("Скоро", True, BLACK)
+        WIN.blit(text, (WIDTH // 2 - text.get_width() // 2, 310))
+
+        # Кнопка карты 3 (недоступна)
+        map3_button = pygame.Rect(WIDTH // 2 - 100, 400, 200, 50)
+        pygame.draw.rect(WIN, GRAY, map3_button)
+        text = font.render("Скоро", True, BLACK)
+        WIN.blit(text, (WIDTH // 2 - text.get_width() // 2, 410))
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                return None
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if map1_button.collidepoint(event.pos):
+                    return "map1"  # Возвращаем выбранную карту
+
+        pygame.display.update()
 
 # Класс танка
 class Tank:
@@ -68,6 +114,8 @@ class Tank:
         self.invulnerable_start_time = 0
         self.image = load_tank_image()
         self.direction = "up"  # Направление танка
+        self.dx = 0  # Направление по оси X
+        self.dy = 0  # Направление по оси Y
 
     def draw(self, win):
         # Поворачиваем изображение в зависимости от направления
@@ -82,6 +130,10 @@ class Tank:
         win.blit(rotated_image, (self.x, self.y))
 
     def move(self, dx, dy):
+        # Сохраняем направление движения
+        self.dx = dx
+        self.dy = dy
+
         # Проверка границ окна
         new_x = self.x + dx * TANK_SPEED
         new_y = self.y + dy * TANK_SPEED
@@ -217,50 +269,37 @@ class EnemyTank(Tank):
             return self.shoot()
         return None
 
-# Титульный экран
-def title_screen():
-    run = True
-    clock = pygame.time.Clock()
+# Функция для отображения результатов
+def show_results(win, time_elapsed, bonuses_collected, victory):
+    font = pygame.font.SysFont("Arial", 40)
+    win.fill(WHITE)
 
-    # Загрузка фона
-    background = load_background()
+    # Отображение результатов
+    result_text = "Победа!" if victory else "Поражение!"
+    time_text = f"Время: {time_elapsed:.2f} сек"
+    bonuses_text = f"Бонусов собрано: {bonuses_collected}"
 
-    while run:
-        clock.tick(60)
-        WIN.blit(background, (0, 0))
+    # Отрисовка текста
+    win.blit(font.render(result_text, True, BLACK), (WIDTH // 2 - 100, 100))
+    win.blit(font.render(time_text, True, BLACK), (WIDTH // 2 - 100, 200))
+    win.blit(font.render(bonuses_text, True, BLACK), (WIDTH // 2 - 100, 300))
 
-        # Отрисовка кнопок
-        font = pygame.font.SysFont("Arial", 40)
-        text = font.render("Выберите карту", True, WHITE)
-        WIN.blit(text, (WIDTH // 2 - text.get_width() // 2, 100))
+    # Кнопка "Вернуться в меню"
+    return_button = pygame.Rect(WIDTH // 2 - 100, 400, 200, 50)
+    pygame.draw.rect(win, GREEN, return_button)
+    win.blit(font.render("Вернуться в меню", True, BLACK), (WIDTH // 2 - 90, 410))
 
-        # Кнопка карты 1
-        map1_button = pygame.Rect(WIDTH // 2 - 100, 200, 200, 50)
-        pygame.draw.rect(WIN, GREEN, map1_button)
-        text = font.render("Карта 1", True, BLACK)
-        WIN.blit(text, (WIDTH // 2 - text.get_width() // 2, 210))
+    pygame.display.update()
 
-        # Кнопка карты 2 (недоступна)
-        map2_button = pygame.Rect(WIDTH // 2 - 100, 300, 200, 50)
-        pygame.draw.rect(WIN, GRAY, map2_button)
-        text = font.render("Скоро", True, BLACK)
-        WIN.blit(text, (WIDTH // 2 - text.get_width() // 2, 310))
-
-        # Кнопка карты 3 (недоступна)
-        map3_button = pygame.Rect(WIDTH // 2 - 100, 400, 200, 50)
-        pygame.draw.rect(WIN, GRAY, map3_button)
-        text = font.render("Скоро", True, BLACK)
-        WIN.blit(text, (WIDTH // 2 - text.get_width() // 2, 410))
-
+    # Ожидание нажатия кнопки
+    while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
-                return None
+                return
             if event.type == pygame.MOUSEBUTTONDOWN:
-                if map1_button.collidepoint(event.pos):
-                    return "map1"  # Возвращаем выбранную карту
-
-        pygame.display.update()
+                if return_button.collidepoint(event.pos):
+                    return
 
 # Основная функция игры
 def main():
@@ -297,6 +336,10 @@ def main():
         x = random.randint(0, WIDTH - OBSTACLE_WIDTH)
         y = random.randint(0, HEIGHT - OBSTACLE_HEIGHT)
         obstacles.append(Obstacle(x, y))
+
+    # Время начала игры
+    start_time = time.time()
+    bonuses_collected = 0
 
     while run:
         clock.tick(60)
@@ -363,10 +406,19 @@ def main():
                 elif bonus.type == "invulnerability":
                     tank1.activate_invulnerability()
                 bonuses.remove(bonus)
+                bonuses_collected += 1
 
         # Обновление препятствий
         for obstacle in obstacles:
             obstacle.draw(WIN)
+
+        # Проверка столкновений танка с препятствиями
+        tank_rect = tank1.get_rect()
+        for obstacle in obstacles:
+            if tank_rect.colliderect(obstacle.get_rect()):
+                # Возвращаем танк на предыдущую позицию
+                tank1.x -= tank1.dx * TANK_SPEED
+                tank1.y -= tank1.dy * TANK_SPEED
 
         # Обновление неуязвимости
         tank1.update_invulnerability()
@@ -374,9 +426,19 @@ def main():
         # Перезарядка пуль
         tank1.recharge()
 
+        # Проверка завершения игры
+        if not enemies:
+            time_elapsed = time.time() - start_time
+            show_results(WIN, time_elapsed, bonuses_collected, victory=True)
+            run = False
+        elif tank1.hp <= 0:
+            time_elapsed = time.time() - start_time
+            show_results(WIN, time_elapsed, bonuses_collected, victory=False)
+            run = False
+
         pygame.display.update()
 
     pygame.quit()
 
 if __name__ == "__main__":
-    main()  
+    main()
